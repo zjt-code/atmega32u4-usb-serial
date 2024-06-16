@@ -34,7 +34,14 @@
  *  the project and is responsible for the initial application hardware configuration.
  */
 
+#include <stdio.h>
+
+
 #include "USBtoSerial.h"
+#include "USARTtoPrint.h"
+#include "timer.h"
+#include "i2c.h"
+#include "SHT2X.h"
 
 /** Pulse generation counters to keep track of the number of milliseconds remaining for each pulse type */
 #define TX_RX_LED_PULSE_MS 100
@@ -89,7 +96,43 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
 			},
 	};
 
+/*
+void putchar(char c)
+{
+	Serial_SendByte(c);
+}
+*/
 
+static uint8_t CMDToHost[128];
+static uint8_t CMDToSlave[128];
+
+
+
+void Led_txrx_Init(void)
+{
+	DDRB|=0x01; //PB0 output
+	PORTB&=~0X01; // Set PB0
+	
+	DDRD|=0X20; //PD5 output
+	PORTD&=~0X20; // set pd5
+	
+}
+
+void Led_rx_onff(bool onff)
+{
+	if(onff)
+		PORTB&=~0X01;
+		else
+		PORTB|=0X01;
+}
+
+void Led_tx_onff(bool onff)
+{
+	if(onff)
+		PORTD&=~0X20;
+		else
+		PORTD|=0X20;
+}
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -101,6 +144,12 @@ int main(void)
 	RingBuffer_InitBuffer(&USARTtoUSB_Buffer, USARTtoUSB_Buffer_Data, sizeof(USARTtoUSB_Buffer_Data));
 
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
+	
+	Init_Usart_Print();
+	Led_txrx_Init();
+	Timer_Init();
+	Init_I2c();
+	Init_SHT2X();
 	GlobalInterruptEnable();
 
 	for (;;)
@@ -124,13 +173,14 @@ int main(void)
 			 * until it completes as there is a chance nothing is listening and a lengthy timeout could occur */
 			if (Endpoint_IsINReady())
 			{
-			    LEDs_TurnOnLEDs(LEDS_LED1);
+			    //LEDs_TurnOnLEDs(LEDS_LED1);
+				Led_tx_onff(true);
 			    PulseMSRemaining.TxLEDPulse = TX_RX_LED_PULSE_MS;
 			
 				/* Never send more than one bank size less one byte to the host at a time, so that we don't block
 				 * while a Zero Length Packet (ZLP) to terminate the transfer is sent if the host isn't listening */
 				uint8_t BytesToSend = MIN(BufferCount, (CDC_TXRX_EPSIZE - 1));
-
+				printf("send data to host\r\n");
 				/* Read bytes from the USART receive buffer into the USB IN endpoint */
 				while (BytesToSend--)
 				{
@@ -150,10 +200,15 @@ int main(void)
 		/* Load the next byte from the USART transmit buffer into the USART if transmit buffer space is available */
 		if (Serial_IsSendReady() && !(RingBuffer_IsEmpty(&USBtoUSART_Buffer)))
         {
-		    Serial_SendByte(RingBuffer_Remove(&USBtoUSART_Buffer));
-            
-		  	LEDs_TurnOnLEDs(LEDS_LED1);
-		  	PulseMSRemaining.RxLEDPulse = TX_RX_LED_PULSE_MS;
+			  Serial_SendByte(RingBuffer_Remove(&USBtoUSART_Buffer));
+              // add command hear , usart command interpter
+			  
+		  	//LEDs_TurnOnLEDs(LEDS_LED1);
+			  Led_rx_onff(true);
+			  
+		  	  PulseMSRemaining.RxLEDPulse = TX_RX_LED_PULSE_MS;
+			  
+			  printf("send data to usart \r\n");
         }            
 
 		CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
@@ -161,11 +216,13 @@ int main(void)
                 
         /* Turn off TX LED(s) once the TX pulse period has elapsed */
         if (PulseMSRemaining.TxLEDPulse && !(--PulseMSRemaining.TxLEDPulse))
-        LEDs_TurnOffLEDs(LEDS_LED1);
+        //LEDs_TurnOffLEDs(LEDS_LED1);
+		Led_tx_onff(false);
 
         /* Turn off RX LED(s) once the RX pulse period has elapsed */
         if (PulseMSRemaining.RxLEDPulse && !(--PulseMSRemaining.RxLEDPulse))
-        LEDs_TurnOffLEDs(LEDS_LED1);
+        //LEDs_TurnOffLEDs(LEDS_LED1);
+		Led_rx_onff(false);
 	}
 }
 
@@ -290,3 +347,25 @@ void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const C
 {
     bool CurrentDTRState = (CDCInterfaceInfo->State.ControlLineStates.HostToDevice & CDC_CONTROL_LINE_OUT_DTR);
 }
+
+static uint16_t cnt=0;
+
+void Timer1_Handler()
+{
+		cnt++;
+		memset(CMDToHost,0,sizeof(CMDToHost));
+		
+		sprintf(CMDToHost,"timer1 interrupt =%d\r\n",cnt);
+		
+		int len = strlen(CMDToHost) + 2; // add 2 bytes \r\n	
+		for(int x=0; x< len; x++)
+		RingBuffer_Insert(&USARTtoUSB_Buffer,CMDToHost[x]);	
+
+//
+		//uint8_t res = ii2c_writechar_cmd(0x80, 0xfe); //reset
+//
+		//printf("ii2c_write reset = %u\r\d", res);
+		
+		SHT2X_Read_T();
+}
+

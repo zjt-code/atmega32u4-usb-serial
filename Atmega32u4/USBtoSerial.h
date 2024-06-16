@@ -75,6 +75,8 @@
 		void EVENT_USB_Device_ControlRequest(void);
 
 		void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
+		
+		void Timer1_Handler(void);
 
 #endif
 

@@ -248,6 +248,7 @@
 
 				#if !defined(BOARD)
 					#define BOARD              BOARD_NONE
+					//#define BOARD  BOARD_UNO
 				#endif
 			#endif
 
