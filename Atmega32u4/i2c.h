@@ -41,5 +41,15 @@ u8 ii2c_writechar_cmd(u8 devadd,u8 subadd_h);
 
 uint8_t ii2c_read_nosubaddr(uint8_t devadd,uint8_t *buff,uint8_t len);
 
+uint8_t ii2c_write_nosubaddr(uint8_t deadd, uint8_t *buff, uint8_t len);
+
+
+uint8_t ii2c_read_subaddr(uint8_t devadd,uint8_t subaddr, uint8_t *buff, uint8_t len);
+
+
+uint8_t ii2c_scan_addr(uint8_t addr);
+
+
+uint8_t Sda_Read(void);
 
 #endif /* I2C_H_ */

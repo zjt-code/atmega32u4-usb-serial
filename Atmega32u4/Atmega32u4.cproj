@@ -346,6 +346,15 @@
     <Folder Include="src\LUFA\LUFA\Platform\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="appconfig.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="DAC7578.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="DAC7578.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="Descriptors.c">
       <SubType>compile</SubType>
     </Compile>
@@ -359,6 +368,18 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="i2c.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="myusart_cmd.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="myusart_cmd.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="PCA9555.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="PCA9555.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="SHT2X.c">

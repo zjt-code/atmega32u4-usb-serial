@@ -16,6 +16,17 @@ static void Sda_Set_Dir(bool b_input);
 static void Sda_Set_value(bool b_input);
 static void Scl_Set_Value(bool b_input);
 
+
+static void IIC_delay1us(uint16_t delay);
+static void iicstart2(void); //?????,???????,??sck?0?1,???0(?????),??sda??????
+static void iicstop2(void);
+
+static u8 iicrecvack2(void);
+static void iicsendack2(u8 ackbit);
+static void iicsendbyte2(u8 senddata);
+static u8 iicrecvbyte2(void);
+
+
 #define SDA_OUT()	Sda_Set_Dir(false)
 #define SDA_IN()	Sda_Set_Dir(true)
 
@@ -35,20 +46,12 @@ void Init_I2c(void)
 	TWI_PORT |=(1<<SCL);
 	
 }
-//
-//// twi interrupt service
-//ISR(TWI_vect)
-//{
-//
-//}
+
 
 uint8_t Sda_Read(void)
 {
 	// enable input
 	//TWI_DDR &= ~(1<< SDA);
-	
-	//Sda_Set_Dir(true);
-	// read input value
 	return ( TWI_PIN & (1<<SDA)) ? 1 : 0;
 }
 
@@ -80,7 +83,7 @@ static void Scl_Set_Value(bool b_input)
 		TWI_PORT &=~(1<<SCL);
 }
 
-void IIC_delay1us(uint16_t delay)
+static void IIC_delay1us(uint16_t delay)
 {
 	uint32_t i;
 	i = delay << 3;  //  ?1us  ?8    ?delay * 8
@@ -90,11 +93,11 @@ void IIC_delay1us(uint16_t delay)
 static void delay_us(uint32_t us)
 {
 	uint32_t i;
-	i = us << 3;  //  ?1us  ?8    ?delay * 8
+	i = us << 1;  //  ?1us  ?8    ?delay * 8
 	for(;i>0;i--) ;
 }
    
-void iicstart2(void) //?????,???????,??sck?0?1,???0(?????),??sda??????
+static void iicstart2(void) //?????,???????,??sck?0?1,???0(?????),??sda??????
 {
     SDA_OUT();
     Sda_Set_value(1);//sda=1;
@@ -165,6 +168,7 @@ u8 iicrecvack2(void)
     //scl=1;
 	Scl_Set_Value(1);
     IIC_delay1us(10); 	//add	
+	
     //_nop_();_nop_();    
     ackbit=100;      //1/3T,H????????0,????? (???,sda?????(9th)??????slave????)
     while(ackbit)
@@ -210,8 +214,9 @@ void iicsendbyte2(u8 senddata)
         temp<<=1;
       
     }
+	
     //ACK
-   Scl_Set_Value(1);// sda=1;//??sda??      ?????slave????0?1
+  // Scl_Set_Value(1);// sda=1;//??sda??      ?????slave????0?1
 
 	
 	
@@ -263,7 +268,7 @@ void iicsendbyte2(u8 senddata)
 /****************************????****************************
 IIC??????:
 ****************************************************************/
-u8 iicrecvbyte2(void)
+static u8 iicrecvbyte2(void)
 {   
     u8 i;
     u8 Read_byte = 0;
@@ -288,10 +293,8 @@ u8 iicrecvbyte2(void)
 
 u16 ii2c_readchar_8add_16bit(u8 devadd,u8 subadd_h)
 {
-//	u8 subadd_high,subadd_low;
-	u16 data1,data2;
-	//devadd = devadd<<1;
- 
+
+	u16 data1,data2; 
 	//IIC_Start(); 
     iicstart2();
 //	delay_us(10);//5
@@ -303,9 +306,9 @@ u16 ii2c_readchar_8add_16bit(u8 devadd,u8 subadd_h)
 	return 0xffff;
  //  	IIC_Stop(); 
 
-    
+    IIC_delay1us(10);  
 	iicstart2(); 
-//	delay_us(10);//5 
+	delay_us(10);//5 
 	iicsendbyte2(devadd | 0x01);
 	if(iicrecvack2())
 	return 0xffff;
@@ -319,26 +322,55 @@ u16 ii2c_readchar_8add_16bit(u8 devadd,u8 subadd_h)
 	return data2;
 }
 
-uint8_t ii2c_read_nosubaddr(uint8_t devadd,uint8_t *buff,uint8_t len)
+
+uint8_t ii2c_read_subaddr(uint8_t devadd,uint8_t subaddr, uint8_t *buff, uint8_t len)
 {
-	//	u8 subadd_high,subadd_low;
-	//u16 data1,data2;
-	uint8_t i_index=0;
-	
-	//devadd = devadd<<1;
-	
+
+	if( len < 1) return 0x4; 
+
+
 	//IIC_Start();
-	//iicstart2();
-	////	delay_us(10);//5
-	//iicsendbyte2(devadd);
-	//if(iicrecvack2())
-	//return 0xff;
-	//iicsendbyte2(subadd_h);
-	//if(iicrecvack2())
-	//return 0xffff;
+	iicstart2();
+	//	delay_us(10);//5
+	iicsendbyte2(devadd);
+	if(iicrecvack2())
+	return 0x1;
+	iicsendbyte2(subaddr);
+	if(iicrecvack2())
+	return 0x2;
 	//  	IIC_Stop();
+	//iicstop2();
+	
+	len --;
+	//IIC_delay1us(10);  
+	iicstart2();
+	//delay_us(10);//5
+	iicsendbyte2(devadd | 0x01);
+	if(iicrecvack2())
+	return 0x3;
+	while(len > 0)
+	{
+		*buff = iicrecvbyte2();
+		 iicsendack2(0);  //ack
+		 buff++;
+		 len--;
+	}
+	*buff = iicrecvbyte2();
+	iicsendack2(1);//no ack
+	iicstop2();	
+	
+	return 0;
 
 	
+}
+
+
+
+uint8_t ii2c_read_nosubaddr(uint8_t devadd,uint8_t *buff,uint8_t len)
+{
+	
+	uint8_t i_index=0;
+		
 	iicstart2();
 	//	delay_us(10);//5
 	iicsendbyte2(devadd | 0x01);
@@ -351,11 +383,31 @@ uint8_t ii2c_read_nosubaddr(uint8_t devadd,uint8_t *buff,uint8_t len)
 	}
 	buff[i_index] = iicrecvbyte2();
 	iicsendack2(1);//no ack
-	iicstop2();
-	//data2 = ((data2<<8)&0xFF00)+(data1&0x00FF);
+	iicstop2();	
 	
 	return 0x00;
 }
+
+uint8_t ii2c_write_nosubaddr(uint8_t deadd, uint8_t *buff, uint8_t len)
+{
+	iicstart2();
+	while(len > 0)
+	{
+		iicsendbyte2(*buff++);
+		
+		if(iicrecvack2())
+		{
+			iicstop2();
+			return len;
+		}
+		
+		len--;
+	}
+	iicstop2();
+	
+	return 0;
+}
+
 
 u16 ii2c_writechar_8add_16bit(u8 devadd,u8 subadd_h,u16 data)
 {
@@ -435,4 +487,22 @@ u8 ii2c_writechar_cmd(u8 devadd,u8 subadd_h)
 	return 0xff;  	
 	iicstop2();
   return 0;
+}
+
+
+u8 ii2c_scan_addr(uint8_t addr)
+{
+	iicstart2();
+	iicsendbyte2(addr);
+	if(iicrecvack2())
+	{
+			iicstop2();
+			return 0xff;
+	}
+	else
+	{	
+		iicstop2();
+		return 0x00;
+	}
+		
 }

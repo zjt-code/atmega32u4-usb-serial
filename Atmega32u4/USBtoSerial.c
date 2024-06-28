@@ -42,6 +42,8 @@
 #include "timer.h"
 #include "i2c.h"
 #include "SHT2X.h"
+#include "DAC7578.h"
+#include "PCA9555.h"
 
 /** Pulse generation counters to keep track of the number of milliseconds remaining for each pulse type */
 #define TX_RX_LED_PULSE_MS 100
@@ -105,16 +107,18 @@ void putchar(char c)
 
 static uint8_t CMDToHost[128];
 static uint8_t CMDToSlave[128];
-
-
+static bool b_connect = false;
 
 void Led_txrx_Init(void)
 {
-	DDRB|=0x01; //PB0 output
 	PORTB&=~0X01; // Set PB0
+	DDRB|=0x01; //PB0 output
 	
 	DDRD|=0X20; //PD5 output
 	PORTD&=~0X20; // set pd5
+	
+	DDRD|=(1<<PORTD7)	; //PD7 output
+	PORTD&=~(1<<PORTD7); // set pd7
 	
 }
 
@@ -122,7 +126,7 @@ void Led_rx_onff(bool onff)
 {
 	if(onff)
 		PORTB&=~0X01;
-		else
+	else
 		PORTB|=0X01;
 }
 
@@ -143,13 +147,15 @@ int main(void)
 	RingBuffer_InitBuffer(&USBtoUSART_Buffer, USBtoUSART_Buffer_Data, sizeof(USBtoUSART_Buffer_Data));
 	RingBuffer_InitBuffer(&USARTtoUSB_Buffer, USARTtoUSB_Buffer_Data, sizeof(USARTtoUSB_Buffer_Data));
 
-	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
-	
+	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);	
 	Init_Usart_Print();
 	Led_txrx_Init();
 	Timer_Init();
 	Init_I2c();
-	Init_SHT2X();
+	//Init_SHT2X();
+	
+	DAC7578_Init();
+	
 	GlobalInterruptEnable();
 
 	for (;;)
@@ -249,13 +255,15 @@ void SetupHardware(void)
 /** Event handler for the library USB Connection event. */
 void EVENT_USB_Device_Connect(void)
 {
-	LEDs_SetAllLEDs(LEDMASK_USB_ENUMERATING);
+	//LEDs_SetAllLEDs(LEDMASK_USB_ENUMERATING);
+	//b_connect =true;
 }
 
 /** Event handler for the library USB Disconnection event. */
 void EVENT_USB_Device_Disconnect(void)
 {
-	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
+	//LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
+	//b_connect = false;
 }
 
 /** Event handler for the library USB Configuration Changed event. */
@@ -349,23 +357,61 @@ void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const C
 }
 
 static uint16_t cnt=0;
+static uint8_t addr =1;
+static uint8_t input_buf[2];
 
 void Timer1_Handler()
 {
+	
+	    uint8_t res1, res2;
+		
+		//res = DAC7578_Init();
+		
+		
+		
+		
 		cnt++;
-		memset(CMDToHost,0,sizeof(CMDToHost));
 		
-		sprintf(CMDToHost,"timer1 interrupt =%d\r\n",cnt);
+		if(cnt > 30)
+		{
+			    res1 = DAC7578_Init();
+			   // res = ii2c_scan_addr(addr);
+			    res2 = PCA9555_Read_Data(PCA9555_SL0_ADDR,0,input_buf,2);
+			 
+				//res = PCA9555_Config(PCA9555_SL0_ADDR);
+				
+				memset(CMDToHost,0,sizeof(CMDToHost));
+				
+				sprintf(CMDToHost,"timer1 interrupt =%d,res1 = %d, res2=%d,input[0]=%d,input[1]=%d, addr=%d\r\n",cnt,res1,res2,
+				input_buf[0],input_buf[1],addr);
+				
+				int len = strlen(CMDToHost) + 2; // add 2 bytes \r\n
+				for(int x=0; x< len; x++)
+				RingBuffer_Insert(&USARTtoUSB_Buffer,CMDToHost[x]);
+				
+			   addr+=2;
+		}
 		
-		int len = strlen(CMDToHost) + 2; // add 2 bytes \r\n	
-		for(int x=0; x< len; x++)
-		RingBuffer_Insert(&USARTtoUSB_Buffer,CMDToHost[x]);	
+		
 
 //
 		//uint8_t res = ii2c_writechar_cmd(0x80, 0xfe); //reset
 //
 		//printf("ii2c_write reset = %u\r\d", res);
 		
-		SHT2X_Read_T();
+	//	SHT2X_Read_T();
+	
+	if(PIND &(1<<PIND7))
+	{
+		PORTD&=~(1<<PORTD7);
+			//TWI_PORT |=(1<<SCL);
+			//TWI_PORT |=(1<<SCL);
+	}else
+	{
+		PORTD|=(1<<PORTD7);
+			//TWI_PORT &=~(1<<SCL);
+			//TWI_PORT |=(1<<SCL);
+	}
+	
 }
 

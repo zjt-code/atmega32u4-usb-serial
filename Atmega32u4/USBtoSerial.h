@@ -77,6 +77,11 @@
 		void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
 		
 		void Timer1_Handler(void);
+		
+		
+		void Led_txrx_Init(void);
+		void Led_rx_onff(bool onff);
+		void Led_tx_onff(bool onff);
 
 #endif
 
