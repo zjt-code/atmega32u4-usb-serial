@@ -35,8 +35,6 @@
  */
 
 #include <stdio.h>
-
-
 #include "USBtoSerial.h"
 #include "USARTtoPrint.h"
 #include "timer.h"
@@ -44,6 +42,7 @@
 #include "SHT2X.h"
 #include "DAC7578.h"
 #include "PCA9555.h"
+#include "myusart_cmd.h"
 
 /** Pulse generation counters to keep track of the number of milliseconds remaining for each pulse type */
 #define TX_RX_LED_PULSE_MS 100
@@ -147,15 +146,14 @@ int main(void)
 	RingBuffer_InitBuffer(&USBtoUSART_Buffer, USBtoUSART_Buffer_Data, sizeof(USBtoUSART_Buffer_Data));
 	RingBuffer_InitBuffer(&USARTtoUSB_Buffer, USARTtoUSB_Buffer_Data, sizeof(USARTtoUSB_Buffer_Data));
 
-	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);	
+	//LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);	
 	Init_Usart_Print();
 	Led_txrx_Init();
 	Timer_Init();
 	Init_I2c();
 	//Init_SHT2X();
-	
-	DAC7578_Init();
-	
+	DAC_Init_Output(0);	
+	PCA9555_All_Config();	
 	GlobalInterruptEnable();
 
 	for (;;)
@@ -206,15 +204,18 @@ int main(void)
 		/* Load the next byte from the USART transmit buffer into the USART if transmit buffer space is available */
 		if (Serial_IsSendReady() && !(RingBuffer_IsEmpty(&USBtoUSART_Buffer)))
         {
-			  Serial_SendByte(RingBuffer_Remove(&USBtoUSART_Buffer));
-              // add command hear , usart command interpter
+			  // Serial_SendByte(RingBuffer_Remove(&USBtoUSART_Buffer));
+              /******** add command hear , usart command interpter*******/
+			  
+			  myusart_rev(RingBuffer_Remove(&USBtoUSART_Buffer));
 			  
 		  	//LEDs_TurnOnLEDs(LEDS_LED1);
 			  Led_rx_onff(true);
 			  
 		  	  PulseMSRemaining.RxLEDPulse = TX_RX_LED_PULSE_MS;
 			  
-			  printf("send data to usart \r\n");
+			  // for debug
+			  //printf("send data to usart \r\n");
         }            
 
 		CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
@@ -357,61 +358,72 @@ void EVENT_CDC_Device_ControLineStateChanged(USB_ClassInfo_CDC_Device_t* const C
 }
 
 static uint16_t cnt=0;
-static uint8_t addr =1;
-static uint8_t input_buf[2];
+//static uint8_t addr =1;
+//static uint8_t input_buf[6];
+//static uint16_t cur=0;
+
 
 void Timer1_Handler()
 {
-	
-	    uint8_t res1, res2;
-		
-		//res = DAC7578_Init();
-		
-		
-		
-		
+		myusart_rev_cout_plus();
+	    //uint8_t res1, res2,res3;			
 		cnt++;
-		
-		if(cnt > 30)
-		{
-			    res1 = DAC7578_Init();
-			   // res = ii2c_scan_addr(addr);
-			    res2 = PCA9555_Read_Data(PCA9555_SL0_ADDR,0,input_buf,2);
-			 
-				//res = PCA9555_Config(PCA9555_SL0_ADDR);
+				//
+		//if(cnt > 30)
+		//{
+			 //
+			   //res2 = PCA9555_Read_All_Input(input_buf);		 
+				//
+				//
+				////res3=DAC_Set_Output_Value(SIGLE_CHAN_SET,40,1);
+				////
+				////res3=DAC_Set_Output_Value(SIGLE_CHAN_SET,40,8);
+				//cur+=10;
+				//if(cur>100)cur=0;
+				//
+				//res3=DAC_Set_Output_Value(SIGLE_CHAN_SET,cur,19);
+				//
+				//
+				//
+				//
+				//memset(CMDToHost,0,sizeof(CMDToHost));
+				//
+				//sprintf(CMDToHost,"timer1 interrupt =%d,res1 = %d, res2=%d, res3=%d,%02x.%02x.%02x.%02x.%02x.%02x\r\n",cnt,res1,res2,res3,
+				//input_buf[0],input_buf[1],input_buf[2],input_buf[3],input_buf[4],input_buf[5]);
+				//
+				//int len = strlen(CMDToHost) + 2; // add 2 bytes \r\n
+				//for(int x=0; x< len; x++)
+				//RingBuffer_Insert(&USARTtoUSB_Buffer,CMDToHost[x]);
+				//
+			   //addr+=2;
+		//}
 				
-				memset(CMDToHost,0,sizeof(CMDToHost));
-				
-				sprintf(CMDToHost,"timer1 interrupt =%d,res1 = %d, res2=%d,input[0]=%d,input[1]=%d, addr=%d\r\n",cnt,res1,res2,
-				input_buf[0],input_buf[1],addr);
-				
-				int len = strlen(CMDToHost) + 2; // add 2 bytes \r\n
-				for(int x=0; x< len; x++)
-				RingBuffer_Insert(&USARTtoUSB_Buffer,CMDToHost[x]);
-				
-			   addr+=2;
-		}
-		
-		
-
-//
-		//uint8_t res = ii2c_writechar_cmd(0x80, 0xfe); //reset
-//
-		//printf("ii2c_write reset = %u\r\d", res);
-		
 	//	SHT2X_Read_T();
-	
-	if(PIND &(1<<PIND7))
-	{
-		PORTD&=~(1<<PORTD7);
-			//TWI_PORT |=(1<<SCL);
-			//TWI_PORT |=(1<<SCL);
-	}else
-	{
-		PORTD|=(1<<PORTD7);
-			//TWI_PORT &=~(1<<SCL);
-			//TWI_PORT |=(1<<SCL);
+	if(cnt >10)
+	{	
+			if(PIND &(1<<PIND7)){
+				PORTD&=~(1<<PORTD7);
+				}else{
+				PORTD|=(1<<PORTD7);
+			}
+	 cnt=0;
 	}
 	
 }
 
+
+uint8_t USBtoSerial_PutIntoUsbBuff(uint8_t *buff, uint8_t len)
+{
+	while(len > 0)
+	{
+		if ((USB_DeviceState == DEVICE_STATE_Configured) && !(RingBuffer_IsFull(&USARTtoUSB_Buffer)))
+		 {
+			 RingBuffer_Insert(&USARTtoUSB_Buffer, *buff++);
+			 len--;
+		 }
+		 else
+		 return 0xff;
+	}
+		
+		return 0;
+}

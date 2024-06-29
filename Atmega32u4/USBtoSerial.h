@@ -82,6 +82,8 @@
 		void Led_txrx_Init(void);
 		void Led_rx_onff(bool onff);
 		void Led_tx_onff(bool onff);
+		
+		uint8_t USBtoSerial_PutIntoUsbBuff(uint8_t *buff, uint8_t len);
 
 #endif
 

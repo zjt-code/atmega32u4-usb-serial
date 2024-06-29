@@ -11,6 +11,37 @@
 #include "i2c.h"
 #include "PCA9555.h"
 
+
+uint8_t PCA9555_All_Config(void)
+{
+		uint8_t res = PCA9555_Config(PCA9555_MB_ADDR);
+		if(res) return 1;
+		
+		res = PCA9555_Config(PCA9555_SL0_ADDR);
+		if(res) return 2;
+		
+		res = PCA9555_Config(PCA9555_SL1_ADDR);
+		if(res) return 3;
+		
+		
+		return 0;
+}
+
+
+uint8_t PCA9555_Read_All_Input(uint8_t *buff)
+{
+	uint8_t res = PCA9555_Read_Data(PCA9555_MB_ADDR,PCA9555_INPORT0,buff,2);
+	if(res)return 1;
+	
+	res = PCA9555_Read_Data(PCA9555_SL0_ADDR,PCA9555_INPORT0,buff+2,2);
+	if(res)return 2;
+	
+	res = PCA9555_Read_Data(PCA9555_SL1_ADDR,PCA9555_INPORT0,buff+4,2);
+	if(res)return 3;
+	
+	return 0;
+	
+}
 uint8_t PCA9555_Read_Data(uint8_t devaddr,uint8_t cmd, uint8_t *buff, uint8_t buf_len)
 {
 	
@@ -18,6 +49,9 @@ uint8_t PCA9555_Read_Data(uint8_t devaddr,uint8_t cmd, uint8_t *buff, uint8_t bu
 	
 
 }
+
+
+// config all ports as input
 
 uint8_t PCA9555_Config(uint8_t addr)
 {

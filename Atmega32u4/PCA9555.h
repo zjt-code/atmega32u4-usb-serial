@@ -9,9 +9,9 @@
 #ifndef PCA9555_H_
 #define PCA9555_H_
 
-#define PCA9555_MB_ADDR  0X40
-#define PCA9555_SL0_ADDR 0X42
-#define PCA9555_SL1_ADDR 0X44
+#define PCA9555_MB_ADDR		0X42
+#define PCA9555_SL0_ADDR    0X40
+#define PCA9555_SL1_ADDR    0X44
 
 
 #define PCA9555_INPORT0  0
@@ -19,6 +19,9 @@
 
 
 
+uint8_t PCA9555_All_Config(void);
+
+uint8_t PCA9555_Read_All_Input(uint8_t *buff);
 
 uint8_t PCA9555_Read_Data(uint8_t devaddr,uint8_t cmd, uint8_t *buff, uint8_t buf_len);
 uint8_t PCA9555_Config(uint8_t addr);

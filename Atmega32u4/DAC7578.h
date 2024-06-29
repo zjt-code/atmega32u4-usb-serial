@@ -33,9 +33,14 @@
 #define DAC_CH_H					7
 
 
+#define ALL_CHAN_SET				1
+#define SIGLE_CHAN_SET				2
 
 
-uint8_t DAC7578_Init(void);
-uint8_t DAC7578_Set_Output_V(uint8_t addr,uint8_t ch, uint16_t vol);
+
+
+uint8_t DAC_Init_Output(uint16_t vol);
+uint8_t DAC_Set_Output_Value(uint8_t signle_all,uint16_t mA,uint8_t chn);
+
 
 #endif /* DAC7578_H_ */

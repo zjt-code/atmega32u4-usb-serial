@@ -391,6 +391,7 @@ uint8_t ii2c_read_nosubaddr(uint8_t devadd,uint8_t *buff,uint8_t len)
 uint8_t ii2c_write_nosubaddr(uint8_t deadd, uint8_t *buff, uint8_t len)
 {
 	iicstart2();
+	
 	while(len > 0)
 	{
 		iicsendbyte2(*buff++);
