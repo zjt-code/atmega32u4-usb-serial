@@ -120,12 +120,32 @@ static void myusart_rev_cmd(void)
 						
 					uint16_t set_ma=(uint16_t)usart_cmd_buff[2];
 					set_ma+= ((uint16_t)usart_cmd_buff[3]<<8);
-					
+
+#if DAC_SET_MA_MODE					
 					if(set_ma >200)
+#else
+					if(set_ma > 4095)
+#endif
 					{
 						reponse_buff[response_len++]=0x03; break;  //out of  current range
 					}
 					
+					
+					//if(!set_ma)
+					//{
+						//DAC_Init_Output(0);reponse_buff[response_len++]=0x00; //success
+						//break;
+					//}
+						//
+					//if(!DAC_Get_Pwr_State())
+					//{
+						//
+							////DAC_Pwr_Mode_Set(POWER_MODE_ON);
+							//DAC_RESET(DAC7578_RSTMODE_POW);
+							//Delay_MS(10);
+							//
+							//DAC_Set_Pwr_State(true);
+					//}	
 					
 					if(DAC_Set_Output_Value(sigl_all,set_ma,usart_cmd_buff[1]))
 					{
@@ -153,8 +173,7 @@ static void myusart_rev_cmd(void)
 					{
 						reponse_buff[response_len++] = 0x00;
 						response_len+=6; // add pca9555 reading len
-					}
-					
+					}				
 					
 				}
 				break;				

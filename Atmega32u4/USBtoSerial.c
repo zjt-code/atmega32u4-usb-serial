@@ -152,7 +152,9 @@ int main(void)
 	Timer_Init();
 	Init_I2c();
 	//Init_SHT2X();
-	DAC_Init_Output(0);	
+	//DAC_Init_Output(0);
+	DAC_All_Chn_Output(0);
+	DAC_Init(false);	
 	PCA9555_All_Config();	
 	GlobalInterruptEnable();
 
@@ -184,7 +186,7 @@ int main(void)
 				/* Never send more than one bank size less one byte to the host at a time, so that we don't block
 				 * while a Zero Length Packet (ZLP) to terminate the transfer is sent if the host isn't listening */
 				uint8_t BytesToSend = MIN(BufferCount, (CDC_TXRX_EPSIZE - 1));
-				printf("send data to host\r\n");
+				//printf("send data to host\r\n");
 				/* Read bytes from the USART receive buffer into the USB IN endpoint */
 				while (BytesToSend--)
 				{
@@ -288,10 +290,15 @@ void EVENT_USB_Device_ControlRequest(void)
  */
 ISR(USART1_RX_vect, ISR_BLOCK)
 {
-	uint8_t ReceivedByte = UDR1;
+	#if ENABLE_USART1
+	
+		uint8_t ReceivedByte = UDR1;
 
-	if ((USB_DeviceState == DEVICE_STATE_Configured) && !(RingBuffer_IsFull(&USARTtoUSB_Buffer)))
-	  RingBuffer_Insert(&USARTtoUSB_Buffer, ReceivedByte);
+		if ((USB_DeviceState == DEVICE_STATE_Configured) && !(RingBuffer_IsFull(&USARTtoUSB_Buffer)))
+		RingBuffer_Insert(&USARTtoUSB_Buffer, ReceivedByte);
+	
+	#endif
+	
 }
 
 /** Event handler for the CDC Class driver Line Encoding Changed event.
@@ -300,7 +307,10 @@ ISR(USART1_RX_vect, ISR_BLOCK)
  */
 void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 {
+
+#if ENABLE_USART1		
 	uint8_t ConfigMask = 0;
+
 
 	switch (CDCInterfaceInfo->State.LineEncoding.ParityType)
 	{
@@ -346,6 +356,9 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 
 	/* Release the TX line after the USART has been reconfigured */
 	PORTD &= ~(1 << 3);
+
+	#endif
+	
 }
 
 /** Event handler for control line state change on a CDC interface.
@@ -399,15 +412,18 @@ void Timer1_Handler()
 		//}
 				
 	//	SHT2X_Read_T();
-	if(cnt >10)
-	{	
-			if(PIND &(1<<PIND7)){
-				PORTD&=~(1<<PORTD7);
-				}else{
-				PORTD|=(1<<PORTD7);
-			}
-	 cnt=0;
-	}
+	PORTD|=(1<<PORTD7);
+	
+	//
+	//if(cnt >10)
+	//{	
+		//if(PIND &(1<<PIND7)){
+				//PORTD&=~(1<<PORTD7);
+		//}else{
+				//PORTD|=(1<<PORTD7);
+			//}
+	 //cnt=0;
+	//}
 	
 }
 

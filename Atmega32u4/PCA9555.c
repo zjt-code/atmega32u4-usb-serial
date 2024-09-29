@@ -37,7 +37,7 @@ uint8_t PCA9555_Read_All_Input(uint8_t *buff)
 	if(res)return 2;
 	
 	res = PCA9555_Read_Data(PCA9555_SL1_ADDR,PCA9555_INPORT0,buff+4,2);
-	if(res)return 3;
+    if(res)return 3;
 	
 	return 0;
 	

@@ -9,9 +9,9 @@
 #ifndef PCA9555_H_
 #define PCA9555_H_
 
-#define PCA9555_MB_ADDR		0X42
-#define PCA9555_SL0_ADDR    0X40
-#define PCA9555_SL1_ADDR    0X44
+#define PCA9555_MB_ADDR		0X42     // J13 VCC, J12->GND
+#define PCA9555_SL0_ADDR    0X40    //  J13 GND, J12->GND
+#define PCA9555_SL1_ADDR    0X44   //   J13 GND, J12->VCC
 
 
 #define PCA9555_INPORT0  0
